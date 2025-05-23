@@ -1,5 +1,8 @@
 import stim
 import numpy as np
+import matplotlib.pyplot as plt
+from tqdm import tqdm
+
 
 # Problem 1A
 def generate_repetition_code_circuit(d, p):
@@ -26,6 +29,7 @@ def generate_repetition_code_circuit(d, p):
 
     return circuit
 
+
 # Problem 1B
 def measurement_sampler(circuit, n_runs, seed=42):
     """
@@ -44,6 +48,7 @@ def measurement_sampler(circuit, n_runs, seed=42):
     sampler = stim.CompiledMeasurementSampler(circuit, seed=seed)
     return np.array(sampler.sample(n_runs)).astype(int)
 
+
 # Problem 1C
 def majority_vote(sampled_runs, d):
     """
@@ -61,9 +66,40 @@ def majority_vote(sampled_runs, d):
 
     error_corrected = []
     for run in sampled_runs:
-        if sum(run) < (d-1)/2:
+        if sum(run) < (d - 1) / 2:
             error_corrected.append(0)
         else:
             error_corrected.append(1)
     return error_corrected
 
+
+# Problem 1D
+def simulate_threshold(Nruns=10**6):
+    distances = [3, 5, 7, 9]
+    ps = np.linspace(0.01, 0.7, 20)
+    results = {}
+
+    for d in distances:
+        pL_list = []
+        print(f"\nSimulating for d = {d}")
+        for p in tqdm(ps):
+            circuit = generate_repetition_code_circuit(d, p)
+            samples = measurement_sampler(circuit, n_runs=Nruns)
+            logical_errors = majority_vote(samples, d)
+            pL = sum(logical_errors) / Nruns
+            pL_list.append(pL)
+        results[d] = pL_list
+
+    # Plotting
+    plt.figure(figsize=(10, 6))
+    for d in distances:
+        plt.plot(ps, results[d], label=f"d = {d}")
+    plt.xlabel("Physical error rate p")
+    plt.ylabel("Logical error rate pL")
+    plt.title("Repetition Code Logical Error Rate vs Physical Error Rate")
+    plt.legend()
+    plt.grid(True)
+    plt.yscale("log")
+    plt.savefig("threshold.png")
+
+    return ps, results
