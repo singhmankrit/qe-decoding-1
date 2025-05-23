@@ -1,8 +1,12 @@
-from simulator import generate_repetition_code_circuit, measurement_sampler
+from simulator import generate_repetition_code_circuit, measurement_sampler, majority_vote
 
 
 circuit = generate_repetition_code_circuit(7, 0.1)
 
 print(circuit.diagram())
 
-print(measurement_sampler(circuit, 10))
+sampler = measurement_sampler(circuit, 10)
+print(sampler)
+
+print(majority_vote(sampler, 7))
+

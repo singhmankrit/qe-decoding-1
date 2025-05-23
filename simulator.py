@@ -1,7 +1,7 @@
 import stim
 import numpy as np
 
-
+# Problem 1A
 def generate_repetition_code_circuit(d, p):
     """
     Generate a Stim circuit for a distance-d repetition code with incoming bit-flip noise.
@@ -26,7 +26,7 @@ def generate_repetition_code_circuit(d, p):
 
     return circuit
 
-
+# Problem 1B
 def measurement_sampler(circuit, n_runs, seed=42):
     """
     Samples measurement outcomes after compiling a measurement sampler.
@@ -43,3 +43,27 @@ def measurement_sampler(circuit, n_runs, seed=42):
 
     sampler = stim.CompiledMeasurementSampler(circuit, seed=seed)
     return np.array(sampler.sample(n_runs)).astype(int)
+
+# Problem 1C
+def majority_vote(sampled_runs, d):
+    """
+    Performs majority voting on measurement results to error-correct them.
+
+    Args:
+        sampled_runs (np.ndarray): 2D array where each row is a run and each
+                                   column is a measured qubit outcome.
+        d (int): Code distance used for error correction.
+
+    Returns:
+        list: A list of error-corrected outcomes, where each element is the
+              result of applying majority voting to a corresponding run.
+    """
+
+    error_corrected = []
+    for run in sampled_runs:
+        if sum(run) < (d-1)/2:
+            error_corrected.append(0)
+        else:
+            error_corrected.append(1)
+    return error_corrected
+
