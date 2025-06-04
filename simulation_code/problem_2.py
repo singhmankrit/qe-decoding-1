@@ -87,6 +87,29 @@ def measurement_sampler(circuit, n_runs, seed=42):
 
 # Problem 2C
 def process_measurements(sampled_runs, d):
+    """
+    Process measurement outcomes from a circuit that measures the repetition code.
+
+    Parameters
+    ----------
+    sampled_runs : np.ndarray
+        A 2D array of measurement outcomes, with each row corresponding to a run
+        and each column to a measured qubit.
+    d : int
+        The code distance.
+
+    Returns
+    -------
+    tuple
+        A tuple containing two elements:
+
+        - syndromes: A list of 2D arrays, where each array represents the syndrome
+          measured in a run, with each row corresponding to a round of error
+          correction and each column to an ancilla qubit.
+        - defects: A list of lists of tuples, where each tuple represents a defect
+          (i.e., a syndrome flip in time) in a run, and the tuple contains the
+          time and location of the defect.
+    """
     syndromes = []
     defects = []
     for run in sampled_runs:
