@@ -77,7 +77,7 @@ def majority_vote(sampled_runs, d):
 # Problem 1D
 def simulate_threshold_mv(n_runs=10**6):
     """
-    Simulates the logical error rate of the repetition code for a variety of physical error rates and code distances and plots them.
+    Simulates the logical error rate of the repetition code (using Majority Voting) for a variety of physical error rates and code distances and plots them.
 
     Args:
         n_runs (int): The number of runs to perform at each physical error rate.
@@ -153,6 +153,19 @@ def extract_syndromes(samples):
 
 # Problem 1F
 def decoding_graph_mwpm(d, p, syndromes):
+    """
+    Creates a decoding graph for the repetition code using the minimum weight
+    perfect matching (MWPM) algorithm.
+
+    Args:
+        d (int): The code distance.
+        p (float): The physical error rate.
+        syndromes (np.ndarray): Syndromes to be decoded.
+
+    Returns:
+        np.ndarray: Error corrections, with each element corresponding to a run
+                    and each column to a qubit.
+    """
     graph = pymatching.Matching()
     weight = -np.log(p)
 
@@ -171,6 +184,20 @@ def decoding_graph_mwpm(d, p, syndromes):
 
 # Problem 1G
 def simulate_threshold_mwpm(n_runs=10**6):
+    """
+    Simulates the logical error rate of the repetition code using the minimum
+    weight perfect matching (MWPM) algorithm for various physical error rates
+    and code distances, and plots the results.
+
+    Args:
+        n_runs (int): The number of runs to perform at each physical error rate.
+
+    Returns:
+        tuple: A tuple containing the estimated threshold error rate, an array
+               of physical error rates, and a dictionary of logical error rates
+               for each code distance.
+    """
+
     distances = [3, 5, 7, 9]
     probabilities = np.linspace(0.01, 0.9, 20)
     results = {}
