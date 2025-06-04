@@ -66,7 +66,7 @@ def majority_vote(sampled_runs, d):
 
     error_corrected = []
     for run in sampled_runs:
-        if sum(run) < (d - 1) / 2:
+        if sum(run) <= (d - 1) / 2:
             error_corrected.append(0)
         else:
             error_corrected.append(1)
