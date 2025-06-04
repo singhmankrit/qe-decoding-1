@@ -10,7 +10,7 @@ def generate_repetition_code_circuit(d, p, q):
     for qubit in range(total_qubits):
         circuit.append("R", [qubit])
 
-    for _ in range(d):
+    for _ in range(d - 1):
         # Errors for data qubits
         for qubit in range(d):
             circuit.append("X_ERROR", [qubit], p)
@@ -43,7 +43,7 @@ def generate_repetition_code_circuit(d, p, q):
         for qubit in range(d, total_qubits):
             circuit.append("R", [qubit])
 
-    # Measure ancilla qubits
+    # Measure data qubits
     for qubit in range(d):
         circuit.append("MZ", [qubit])
 
