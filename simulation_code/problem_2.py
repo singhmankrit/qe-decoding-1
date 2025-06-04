@@ -3,6 +3,21 @@ import stim
 
 # Problem 2A
 def generate_repetition_code_circuit(d, p, q):
+    """
+    Generate a Stim circuit for a distance-d repetition code with separate
+    phenomenological bit-flip noise on data and ancilla qubits.
+
+    Args:
+        d (int): Code distance (generally odd).
+        p (float): Probability of a bit-flip (X error) on each data qubit.
+        q (float): Probability of a bit-flip (X error) on each ancilla qubit.
+
+    Returns:
+        stim.Circuit: The corresponding Stim circuit with initialization,
+                      error application, Hadamard gates, controlled-Z gates,
+                      measurements, and resets for the repetition code process.
+    """
+
     circuit = stim.Circuit()
     total_qubits = 2 * d - 1
 
