@@ -74,26 +74,26 @@ def majority_vote(sampled_runs, d):
 
 
 # Problem 1D
-def simulate_threshold(Nruns=10**6):
+def simulate_threshold(n_runs=10**6):
     distances = [3, 5, 7, 9]
-    ps = np.linspace(0.01, 0.7, 20)
+    probabilities = np.linspace(0.01, 0.9, 20)
     results = {}
 
     for d in distances:
         pL_list = []
         print(f"\nSimulating for d = {d}")
-        for p in tqdm(ps):
+        for p in tqdm(probabilities):
             circuit = generate_repetition_code_circuit(d, p)
-            samples = measurement_sampler(circuit, n_runs=Nruns)
+            samples = measurement_sampler(circuit, n_runs=n_runs)
             logical_errors = majority_vote(samples, d)
-            pL = sum(logical_errors) / Nruns
+            pL = sum(logical_errors) / n_runs
             pL_list.append(pL)
         results[d] = pL_list
 
     # Plotting
     plt.figure(figsize=(10, 6))
     for d in distances:
-        plt.plot(ps, results[d], label=f"d = {d}")
+        plt.plot(probabilities, results[d], label=f"d = {d}")
     plt.xlabel("Physical error rate p")
     plt.ylabel("Logical error rate pL")
     plt.title("Repetition Code Logical Error Rate vs Physical Error Rate")
@@ -102,4 +102,4 @@ def simulate_threshold(Nruns=10**6):
     plt.yscale("log")
     plt.savefig("threshold.png")
 
-    return ps, results
+    return probabilities, results

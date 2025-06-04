@@ -6,13 +6,8 @@ from simulator import (
 )
 
 
-circuit = generate_repetition_code_circuit(7, 0.1)
+# circuit = generate_repetition_code_circuit(7, 0.1)
+# sampled_runs = measurement_sampler(circuit, 10)
+# print(majority_vote(sampled_runs, 7))
 
-print(circuit.diagram())
-
-sampler = measurement_sampler(circuit, 10)
-print(sampler)
-
-print(majority_vote(sampler, 7))
-
-simulate_threshold(10**5)
+simulate_threshold()
