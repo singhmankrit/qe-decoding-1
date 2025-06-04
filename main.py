@@ -1,4 +1,4 @@
-from simulation_code import problem_1
+from simulation_code import problem_1, problem_2
 
 # Problem 1
 
@@ -11,3 +11,5 @@ from simulation_code import problem_1
 # print(f"Estimated threshold (MWPM): {threshold_mwpm}")
 
 # Problem 2
+
+print(problem_2.generate_repetition_code_circuit(3, 0.1, 0.2).diagram())
