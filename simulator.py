@@ -112,7 +112,7 @@ def simulate_threshold(n_runs=10**6):
         x=threshold_p,
         color="red",
         linestyle="--",
-        label=f"Estimated threshold ≈ {threshold_p:.3f}",
+        label=f"Estimated threshold ≈ {threshold_p:.2f}",
     )
     plt.xlabel("Physical error rate p")
     plt.ylabel("Logical error rate pL")
