@@ -131,7 +131,7 @@ def simulate_threshold_mv(n_runs=10**6):
     plt.legend()
     plt.grid(True)
     plt.yscale("log")
-    plt.savefig("majority_voting.png")
+    plt.savefig("images/problem_1/majority_voting.png")
 
     return threshold_p, probabilities, results
 
@@ -218,6 +218,6 @@ def simulate_threshold_mwpm(n_runs=10**6):
     plt.legend()
     plt.grid(True)
     plt.yscale("log")
-    plt.savefig("mwpm.png")
+    plt.savefig("images/problem_1/mwpm.png")
 
     return threshold_p, probabilities, results
