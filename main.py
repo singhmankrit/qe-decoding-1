@@ -1,15 +1,12 @@
 from simulator import (
-    generate_repetition_code_circuit,
-    measurement_sampler,
-    majority_vote,
-    simulate_threshold,
+    simulate_threshold_mv,
+    simulate_threshold_mwpm,
 )
 
+# Majority Voting
+threshold_mv, _, _ = simulate_threshold_mv(n_runs=10**4)
+print(f"Estimated threshold (Majority Voting): {threshold_mv}")
 
-# circuit = generate_repetition_code_circuit(7, 0.1)
-# sampled_runs = measurement_sampler(circuit, 10)
-# print(majority_vote(sampled_runs, 7))
-
-threshold, _, _ = simulate_threshold()
-
-print(f"Estimated threshold: {threshold}")
+# Minimum Weight Perfect Matching
+threshold_mwpm, _, _ = simulate_threshold_mwpm(n_runs=10**4)
+print(f"Estimated threshold (MWPM): {threshold_mwpm}")
