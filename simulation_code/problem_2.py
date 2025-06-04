@@ -1,4 +1,5 @@
 import stim
+import numpy as np
 
 
 # Problem 2A
@@ -63,3 +64,52 @@ def generate_repetition_code_circuit(d, p, q):
         circuit.append("MZ", [qubit])
 
     return circuit
+
+
+# Problem 2B
+def measurement_sampler(circuit, n_runs, seed=42):
+    """
+    Samples measurement outcomes after compiling a measurement sampler.
+
+    Args:
+        circuit (stim.Circuit): The quantum circuit to be measured.
+        n_runs (int): The number of times to sample the circuit.
+        seed (int, optional): Random seed for reproducibility. Defaults to 42.
+
+    Returns:
+        np.ndarray: An array of measurement results, with each row corresponding
+                    to a run and each column to a measured qubit.
+    """
+
+    sampler = stim.CompiledMeasurementSampler(circuit, seed=seed)
+    return np.array(sampler.sample(n_runs)).astype(int)
+
+
+# Problem 2C
+def process_measurements(sampled_runs, d):
+    syndromes = []
+    defects = []
+    for run in sampled_runs:
+        n_rounds = d - 1
+        n_ancillas = d - 1
+
+        # Syndromes
+        measured_syndromes = np.array(run[: n_rounds * n_ancillas]).reshape(
+            n_rounds, n_ancillas
+        )
+        final_data = np.array(run[-d:])
+        projected_syndrome = np.array(
+            [final_data[i] ^ final_data[i + 1] for i in range(d - 1)]
+        )
+        syndrome_in_this_run = np.vstack([measured_syndromes, projected_syndrome])
+
+        # Compute defects = syndrome flip in time
+        defects_in_this_run = []
+        for t in range(n_rounds):
+            for i in range(n_ancillas):
+                if syndrome_in_this_run[t, i] != syndrome_in_this_run[t + 1, i]:
+                    defects_in_this_run.append((t, i))  # (time, location)
+
+        syndromes.append(syndrome_in_this_run)
+        defects.append(defects_in_this_run)
+    return syndromes, defects
