@@ -1,4 +1,5 @@
 import stim
+import pymatching
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
@@ -74,7 +75,7 @@ def majority_vote(sampled_runs, d):
 
 
 # Problem 1D
-def simulate_threshold(n_runs=10**6):
+def simulate_threshold_mv(n_runs=10**6):
     """
     Simulates the logical error rate of the repetition code for a variety of physical error rates and code distances and plots them.
 
@@ -126,11 +127,11 @@ def simulate_threshold(n_runs=10**6):
     )
     plt.xlabel("Physical error rate p")
     plt.ylabel("Logical error rate pL")
-    plt.title("Repetition Code Logical Error Rate vs Physical Error Rate")
+    plt.title("Majority Voting: Repetition Code Logical vs Physical Error Rate")
     plt.legend()
     plt.grid(True)
     plt.yscale("log")
-    plt.savefig("threshold.png")
+    plt.savefig("majority_voting.png")
 
     return threshold_p, probabilities, results
 
@@ -151,3 +152,72 @@ def extract_syndromes(samples):
 
 
 # Problem 1F
+def decoding_graph_mwpm(d, p, syndromes):
+    graph = pymatching.Matching()
+    weight = -np.log(p)
+
+    # Boundary edges: qubit 0 and qubit d-1
+    graph.add_boundary_edge(0, weight=weight, fault_ids={0}, error_probability=p)
+    graph.add_boundary_edge(
+        d - 2, weight=weight, fault_ids={d - 1}, error_probability=p
+    )
+
+    # Internal edges: qubit 1 to d-2
+    for i in range(1, d - 1):
+        graph.add_edge(i - 1, i, weight=weight, fault_ids={i}, error_probability=p)
+
+    return graph.decode_batch(syndromes)
+
+
+# Problem 1G
+def simulate_threshold_mwpm(n_runs=10**6):
+    distances = [3, 5, 7, 9]
+    probabilities = np.linspace(0.01, 0.9, 20)
+    results = {}
+
+    for d in distances:
+        pL_list = []
+        print(f"\nSimulating for d = {d}")
+        for p in tqdm(probabilities):
+            circuit = generate_repetition_code_circuit(d, p)
+            samples = measurement_sampler(circuit, n_runs=n_runs)
+            syndromes = extract_syndromes(samples)
+            corrections = decoding_graph_mwpm(d, p, syndromes)
+            logical_outcomes = np.sum((samples + corrections) % 2, axis=1) > (d - 1) / 2
+            pL = sum(logical_outcomes.astype(int)) / n_runs
+            pL_list.append(pL)
+        results[d] = pL_list
+
+    # Estimate threshold
+    threshold_p = None
+    for i in range(len(probabilities) - 1):
+        pL_prev_dist = -1
+        for d in distances:
+            if i > 0 and pL_prev_dist > 0 and pL_prev_dist < results[d][i]:
+                threshold_p = (probabilities[i - 1] + probabilities[i]) / 2
+                break
+            pL_prev_dist = results[d][i]
+        if threshold_p is not None:
+            break
+
+    # Plotting
+    plt.figure(figsize=(10, 6))
+    for d in distances:
+        plt.plot(probabilities, results[d], label=f"d = {d}")
+
+    # Plot threshold marker
+    plt.axvline(
+        x=threshold_p,
+        color="red",
+        linestyle="--",
+        label=f"Estimated threshold ≈ {threshold_p:.2f}",
+    )
+    plt.xlabel("Physical error rate p")
+    plt.ylabel("Logical error rate pL")
+    plt.title("MWPM: Repetition Code Logical vs Physical Error Rate")
+    plt.legend()
+    plt.grid(True)
+    plt.yscale("log")
+    plt.savefig("mwpm.png")
+
+    return threshold_p, probabilities, results
