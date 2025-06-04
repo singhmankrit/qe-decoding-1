@@ -90,23 +90,6 @@ def measurement_sampler(circuit, n_runs, seed=42):
 
 # Problem 2C
 def process_measurements(sampled_runs, d):
-    """
-    Process measurement outcomes from a circuit that measures the repetition code.
-
-    Parameters
-    ----------
-    sampled_runs : np.ndarray
-        A 2D array of measurement outcomes, with each row corresponding to a run
-        and each column to a measured qubit.
-    d : int
-        The code distance.
-
-    Returns
-    -------
-    - defects: A list of lists of tuples, where each tuple represents a defect
-        (i.e., a syndrome flip in time) in a run, and the tuple contains the
-        time and location of the defect.
-    """
     defects = []
     for run in sampled_runs:
         n_rounds = d
@@ -125,14 +108,12 @@ def process_measurements(sampled_runs, d):
         # Compute defects = syndrome flip in time
         defects_in_this_run = []
         for t in range(n_rounds):
-            tmp_defect = []
             for i in range(n_ancillas):
                 if t == 0:
-                    tmp_defect.append(syndrome_in_this_run[0][i])
+                    defects_in_this_run.append(syndrome_in_this_run[0][i])
                 else:
                     defect = syndrome_in_this_run[t][i] ^ syndrome_in_this_run[t - 1][i]
-                    tmp_defect.append(defect)
-            defects_in_this_run.append(tmp_defect)
+                    defects_in_this_run.append(defect)
 
         defects.append(defects_in_this_run)
     return defects
@@ -141,26 +122,35 @@ def process_measurements(sampled_runs, d):
 # Problem 2D
 def build_decoding_graph(d, p, q):
     graph = pymatching.Matching()
-    n_rounds = d  # d-1 measurement rounds + 1 final projected round
-    n_syndromes_per_round = d - 1
+    n_rounds = d
+    n_ancillas = d - 1
 
     def detector_id(i, t):
         """Map stabilizer i at time t to a unique node ID."""
-        return i + t * n_syndromes_per_round
+        return i + t * n_ancillas
 
-    # Spatial edges for data errors
+    total_detectors = n_rounds * n_ancillas
+    boundary_node = total_detectors
+
+    # Spatial edges (within same round)
     for t in range(n_rounds):
-        for i in range(n_syndromes_per_round - 1):
+        for i in range(n_ancillas - 1):
             a = detector_id(i, t)
             b = detector_id(i + 1, t)
             graph.add_edge(a, b, weight=-np.log(p))
 
-    # Temporal edges for ancilla errors
-    for t in range(n_rounds - 1):
-        for i in range(n_syndromes_per_round):
+    # Temporal edges (same stabilizer across rounds)
+    for t in range(n_rounds):
+        for i in range(n_ancillas):
             a = detector_id(i, t)
             b = detector_id(i, t + 1)
             graph.add_edge(a, b, weight=-np.log(q))
+
+    # Boundary edges
+    for t in range(n_rounds):
+        for i in range(n_ancillas):
+            node = detector_id(i, t)
+            graph.add_boundary_edge(node, boundary_node, weight=-np.log(q))
 
     return graph
 
