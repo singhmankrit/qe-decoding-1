@@ -1,5 +1,8 @@
 import stim
+import pymatching
 import numpy as np
+import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 
 # Problem 2A
@@ -100,25 +103,18 @@ def process_measurements(sampled_runs, d):
 
     Returns
     -------
-    tuple
-        A tuple containing two elements:
-
-        - syndromes: A list of 2D arrays, where each array represents the syndrome
-          measured in a run, with each row corresponding to a round of error
-          correction and each column to an ancilla qubit.
-        - defects: A list of lists of tuples, where each tuple represents a defect
-          (i.e., a syndrome flip in time) in a run, and the tuple contains the
-          time and location of the defect.
+    - defects: A list of lists of tuples, where each tuple represents a defect
+        (i.e., a syndrome flip in time) in a run, and the tuple contains the
+        time and location of the defect.
     """
-    syndromes = []
     defects = []
     for run in sampled_runs:
-        n_rounds = d - 1
+        n_rounds = d
         n_ancillas = d - 1
 
         # Syndromes
-        measured_syndromes = np.array(run[: n_rounds * n_ancillas]).reshape(
-            n_rounds, n_ancillas
+        measured_syndromes = np.array(run[: n_ancillas * n_ancillas]).reshape(
+            n_ancillas, n_ancillas
         )
         final_data = np.array(run[-d:])
         projected_syndrome = np.array(
@@ -129,10 +125,96 @@ def process_measurements(sampled_runs, d):
         # Compute defects = syndrome flip in time
         defects_in_this_run = []
         for t in range(n_rounds):
+            tmp_defect = []
             for i in range(n_ancillas):
-                if syndrome_in_this_run[t, i] != syndrome_in_this_run[t + 1, i]:
-                    defects_in_this_run.append((t, i))  # (time, location)
+                if t == 0:
+                    tmp_defect.append(syndrome_in_this_run[0][i])
+                else:
+                    defect = syndrome_in_this_run[t][i] ^ syndrome_in_this_run[t - 1][i]
+                    tmp_defect.append(defect)
+            defects_in_this_run.append(tmp_defect)
 
-        syndromes.append(syndrome_in_this_run)
         defects.append(defects_in_this_run)
-    return syndromes, defects
+    return defects
+
+
+# Problem 2D
+def build_decoding_graph(d, p, q):
+    graph = pymatching.Matching()
+    n_rounds = d  # d-1 measurement rounds + 1 final projected round
+    n_syndromes_per_round = d - 1
+
+    def detector_id(i, t):
+        """Map stabilizer i at time t to a unique node ID."""
+        return i + t * n_syndromes_per_round
+
+    # Spatial edges for data errors
+    for t in range(n_rounds):
+        for i in range(n_syndromes_per_round - 1):
+            a = detector_id(i, t)
+            b = detector_id(i + 1, t)
+            graph.add_edge(a, b, weight=-np.log(p))
+
+    # Temporal edges for ancilla errors
+    for t in range(n_rounds - 1):
+        for i in range(n_syndromes_per_round):
+            a = detector_id(i, t)
+            b = detector_id(i, t + 1)
+            graph.add_edge(a, b, weight=-np.log(q))
+
+    return graph
+
+
+# Problem 2E
+def simulate_threshold_mwpm(n_runs=10**6):
+    distances = [3, 5, 7, 9]
+    probabilities = np.linspace(0.05, 0.15, 20)
+    results = {}
+
+    for d in distances:
+        pL_list = []
+        print(f"\nSimulating for d = {d}")
+        for p in tqdm(probabilities):
+            circuit = generate_repetition_code_circuit(d, p, p)
+            samples = measurement_sampler(circuit, n_runs=n_runs)
+            defects = process_measurements(samples, d)
+            graph = build_decoding_graph(d, p, p)
+            corrections = graph.decode_batch(defects)
+            logical_outcomes = np.sum((samples + corrections) % 2, axis=1) > (d - 1) / 2
+            pL = sum(logical_outcomes.astype(int)) / n_runs
+            pL_list.append(pL)
+        results[d] = pL_list
+
+    # Estimate threshold
+    threshold_p = None
+    for i in range(len(probabilities) - 1):
+        pL_prev_dist = -1
+        for d in distances:
+            if i > 0 and pL_prev_dist > 0 and pL_prev_dist < results[d][i]:
+                threshold_p = (probabilities[i - 1] + probabilities[i]) / 2
+                break
+            pL_prev_dist = results[d][i]
+        if threshold_p is not None:
+            break
+
+    # Plotting
+    plt.figure(figsize=(10, 6))
+    for d in distances:
+        plt.plot(probabilities, results[d], label=f"d = {d}")
+
+    # Plot threshold marker
+    plt.axvline(
+        x=threshold_p,
+        color="red",
+        linestyle="--",
+        label=f"Estimated threshold ≈ {threshold_p:.2f}",
+    )
+    plt.xlabel("Physical error rate p")
+    plt.ylabel("Logical error rate pL")
+    plt.title("MWPM: Repetition Code Logical vs Physical Error Rate")
+    plt.legend()
+    plt.grid(True)
+    plt.yscale("log")
+    plt.savefig("images/problem_2/mwpm.png")
+
+    return threshold_p, probabilities, results
