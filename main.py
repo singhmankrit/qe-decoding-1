@@ -10,4 +10,6 @@ from simulator import (
 # sampled_runs = measurement_sampler(circuit, 10)
 # print(majority_vote(sampled_runs, 7))
 
-simulate_threshold()
+threshold, _, _ = simulate_threshold()
+
+print(f"Estimated threshold: {threshold}")

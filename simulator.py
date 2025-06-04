@@ -90,10 +90,30 @@ def simulate_threshold(n_runs=10**6):
             pL_list.append(pL)
         results[d] = pL_list
 
+    # Estimate threshold
+    threshold_p = None
+    for i in range(len(probabilities) - 1):
+        pL_prev_dist = -1
+        for d in distances:
+            if i > 0 and pL_prev_dist > 0 and pL_prev_dist < results[d][i]:
+                threshold_p = (probabilities[i - 1] + probabilities[i]) / 2
+                break
+            pL_prev_dist = results[d][i]
+        if threshold_p is not None:
+            break
+
     # Plotting
     plt.figure(figsize=(10, 6))
     for d in distances:
         plt.plot(probabilities, results[d], label=f"d = {d}")
+
+    # Plot threshold marker
+    plt.axvline(
+        x=threshold_p,
+        color="red",
+        linestyle="--",
+        label=f"Estimated threshold ≈ {threshold_p:.3f}",
+    )
     plt.xlabel("Physical error rate p")
     plt.ylabel("Logical error rate pL")
     plt.title("Repetition Code Logical Error Rate vs Physical Error Rate")
@@ -102,4 +122,4 @@ def simulate_threshold(n_runs=10**6):
     plt.yscale("log")
     plt.savefig("threshold.png")
 
-    return probabilities, results
+    return threshold_p, probabilities, results
