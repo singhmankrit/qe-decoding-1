@@ -75,6 +75,16 @@ def majority_vote(sampled_runs, d):
 
 # Problem 1D
 def simulate_threshold(n_runs=10**6):
+    """
+    Simulates the logical error rate of the repetition code for a variety of physical error rates and code distances and plots them.
+
+    Args:
+        n_runs (int): The number of runs to perform at each physical error rate.
+
+    Returns:
+        tuple: A tuple containing the estimated threshold error rate, an array of physical error rates, and a dictionary of logical error rates for each code distance.
+    """
+
     distances = [3, 5, 7, 9]
     probabilities = np.linspace(0.01, 0.9, 20)
     results = {}
@@ -123,3 +133,21 @@ def simulate_threshold(n_runs=10**6):
     plt.savefig("threshold.png")
 
     return threshold_p, probabilities, results
+
+
+# Problem 1E
+def extract_syndromes(samples):
+    """
+    Convert data qubit measurement samples to syndrome defects.
+    Each sample produces d-1 syndrome bits: s_i = m_i XOR m_{i+1}
+
+    Args:
+        samples (np.ndarray): shape (n_runs, d), with Z-basis measurements (0/1)
+
+    Returns:
+        np.ndarray: shape (n_runs, d - 1), with syndrome bits
+    """
+    return np.logical_xor(samples[:, :-1], samples[:, 1:]).astype(int)
+
+
+# Problem 1F
