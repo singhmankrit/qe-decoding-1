@@ -157,7 +157,7 @@ def build_decoding_graph(d, p, q):
             a = get_index(d, t, i - 1)
             b = get_index(d, t, i)
             graph.add_edge(
-                a, b, weight=weight_space, error_probability=p, fault_ids={b}
+                a, b, weight=weight_space, error_probability=p, fault_ids={a, b}
             )
 
     # adding time-like edges
@@ -165,7 +165,9 @@ def build_decoding_graph(d, p, q):
         for i in range(d - 1):  # loop over space
             a = get_index(d, t - 1, i)
             b = get_index(d, t, i)
-            graph.add_edge(a, b, weight=weight_time, error_probability=q, fault_ids={b})
+            graph.add_edge(
+                a, b, weight=weight_time, error_probability=q, fault_ids={a, b}
+            )
 
     weight_corner = -np.log(p * (1 - q) + q * (1 - p))
 
@@ -249,9 +251,10 @@ def simulate_threshold_mwpm(n_runs=10**6):
 
             # Step 1: Extract final data qubit measurements (last d bits of each sample)
             final_data = samples[:, -d:]
+            data_corrections = corrections[:, -d:]
 
             # Step 2: Apply the corrections (which flips certain data qubits)
-            corrected_data = (final_data + corrections) % 2  # shape: (n_runs, d)
+            corrected_data = (final_data + data_corrections) % 2  # shape: (n_runs, d)
 
             # Step 3: Majority vote decoder — logical 1 if more than half qubits are 1
             logical_outcomes = np.sum(corrected_data, axis=1) > (d - 1) / 2
