@@ -133,20 +133,68 @@ def process_measurements(sampled_runs, d):
 # Problem 2D
 def build_decoding_graph(d, p, q):
     graph = pymatching.Matching()
-    weight_data = -np.log(p)
-    weight_ancilla = -np.log(q)
+    weight_space = -np.log(p)  # data qubit errors
+    weight_time = -np.log(q)  # ancilla qubit errors
 
-    # # Boundary edges: qubit 0 and qubit d-1
-    # graph.add_boundary_edge(0, weight=weight, fault_ids={0}, error_probability=p)
-    # graph.add_boundary_edge(
-    #     d - 2, weight=weight, fault_ids={d - 1}, error_probability=p
-    # )
+    def get_index(d, t, i):
+        return (d - 1) * t + i
 
-    # # Internal edges: qubit 1 to d-2
-    # for i in range(1, d - 1):
-    #     graph.add_edge(i - 1, i, weight=weight, fault_ids={i}, error_probability=p)
+    # adding space-like edges
+    for t in range(d):  # loop over time
+        for i in range(1, d - 1):  # loop over space
+            a = get_index(d, t, i - 1)
+            b = get_index(d, t, i)
+            graph.add_edge(a, b, weight=weight_space, error_probability=p)
 
-    # return graph.decode_batch(syndromes)
+    # adding time-like edges
+    for t in range(1, d):  # loop over time
+        for i in range(d - 1):  # loop over space
+            a = get_index(d, t - 1, i)
+            b = get_index(d, t, i)
+            graph.add_edge(a, b, weight=weight_time, error_probability=q)
+
+    weight_corner = -np.log(p * (1 - q) + q * (1 - p))
+
+    # Boundary edges:
+    for t in range(d):
+        for i in range(d - 1):
+            idx = get_index(d, t, i)
+            # corners
+            if t == 0 and i == 0:
+                graph.add_boundary_edge(
+                    idx,
+                    weight=weight_corner,
+                    error_probability=p * (1 - q) + q * (1 - p),
+                )
+            elif t == 0 and i == d - 2:
+                graph.add_boundary_edge(
+                    idx,
+                    weight=weight_corner,
+                    error_probability=p * (1 - q) + q * (1 - p),
+                )
+            elif t == d - 1 and i == 0:
+                graph.add_boundary_edge(
+                    idx,
+                    weight=weight_corner,
+                    error_probability=p * (1 - q) + q * (1 - p),
+                )
+            elif t == d - 1 and i == d - 2:
+                graph.add_boundary_edge(
+                    idx,
+                    weight=weight_corner,
+                    error_probability=p * (1 - q) + q * (1 - p),
+                )
+            # edges
+            elif t == 0:
+                graph.add_boundary_edge(idx, weight=weight_time, error_probability=q)
+            elif t == d - 1:
+                graph.add_boundary_edge(idx, weight=weight_time, error_probability=q)
+            elif i == 0:
+                graph.add_boundary_edge(idx, weight=weight_space, error_probability=p)
+            elif i == d - 2:
+                graph.add_boundary_edge(idx, weight=weight_space, error_probability=p)
+
+    return graph
 
 
 # # Problem 2E
