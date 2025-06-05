@@ -132,6 +132,18 @@ def process_measurements(sampled_runs, d):
 
 # Problem 2D
 def build_decoding_graph(d, p, q):
+    """
+    Builds a decoding graph for the repetition code.
+
+    Args:
+        d (int): The number of rounds.
+        p (float): The probability of a bit-flip error on a data qubit.
+        q (float): The probability of a bit-flip error on an ancilla qubit.
+
+    Returns:
+        pymatching.Matching: The decoding graph.
+    """
+
     graph = pymatching.Matching()
     weight_space = -np.log(p)  # data qubit errors
     weight_time = -np.log(q)  # ancilla qubit errors
@@ -144,14 +156,16 @@ def build_decoding_graph(d, p, q):
         for i in range(1, d - 1):  # loop over space
             a = get_index(d, t, i - 1)
             b = get_index(d, t, i)
-            graph.add_edge(a, b, weight=weight_space, error_probability=p)
+            graph.add_edge(
+                a, b, weight=weight_space, error_probability=p, fault_ids={b}
+            )
 
     # adding time-like edges
     for t in range(1, d):  # loop over time
         for i in range(d - 1):  # loop over space
             a = get_index(d, t - 1, i)
             b = get_index(d, t, i)
-            graph.add_edge(a, b, weight=weight_time, error_probability=q)
+            graph.add_edge(a, b, weight=weight_time, error_probability=q, fault_ids={b})
 
     weight_corner = -np.log(p * (1 - q) + q * (1 - p))
 
@@ -165,88 +179,117 @@ def build_decoding_graph(d, p, q):
                     idx,
                     weight=weight_corner,
                     error_probability=p * (1 - q) + q * (1 - p),
+                    fault_ids={idx},
                 )
+                graph.set_boundary_nodes({idx})
             elif t == 0 and i == d - 2:
                 graph.add_boundary_edge(
                     idx,
                     weight=weight_corner,
                     error_probability=p * (1 - q) + q * (1 - p),
+                    fault_ids={idx},
                 )
+                graph.set_boundary_nodes({idx})
             elif t == d - 1 and i == 0:
                 graph.add_boundary_edge(
                     idx,
                     weight=weight_corner,
                     error_probability=p * (1 - q) + q * (1 - p),
+                    fault_ids={idx},
                 )
+                graph.set_boundary_nodes({idx})
             elif t == d - 1 and i == d - 2:
                 graph.add_boundary_edge(
                     idx,
                     weight=weight_corner,
                     error_probability=p * (1 - q) + q * (1 - p),
+                    fault_ids={idx},
                 )
+                graph.set_boundary_nodes({idx})
             # edges
             elif t == 0:
-                graph.add_boundary_edge(idx, weight=weight_time, error_probability=q)
+                graph.add_boundary_edge(
+                    idx, weight=weight_time, error_probability=q, fault_ids={idx}
+                )
+                graph.set_boundary_nodes({idx})
             elif t == d - 1:
-                graph.add_boundary_edge(idx, weight=weight_time, error_probability=q)
+                graph.add_boundary_edge(
+                    idx, weight=weight_time, error_probability=q, fault_ids={idx}
+                )
+                graph.set_boundary_nodes({idx})
             elif i == 0:
-                graph.add_boundary_edge(idx, weight=weight_space, error_probability=p)
+                graph.add_boundary_edge(
+                    idx, weight=weight_space, error_probability=p, fault_ids={idx}
+                )
+                graph.set_boundary_nodes({idx})
             elif i == d - 2:
-                graph.add_boundary_edge(idx, weight=weight_space, error_probability=p)
+                graph.add_boundary_edge(
+                    idx, weight=weight_space, error_probability=p, fault_ids={idx}
+                )
+                graph.set_boundary_nodes({idx})
 
     return graph
 
 
-# # Problem 2E
-# def simulate_threshold_mwpm(n_runs=10**6):
-#     distances = [3, 5, 7, 9]
-#     probabilities = np.linspace(0.05, 0.15, 20)
-#     results = {}
+# Problem 2E
+def simulate_threshold_mwpm(n_runs=10**6):
+    distances = [3, 5, 7, 9]
+    probabilities = np.linspace(0.05, 0.15, 20)
+    results = {}
 
-#     for d in distances:
-#         pL_list = []
-#         print(f"\nSimulating for d = {d}")
-#         for p in tqdm(probabilities):
-#             circuit = generate_repetition_code_circuit(d, p, p)
-#             samples = measurement_sampler(circuit, n_runs=n_runs)
-#             defects = process_measurements(samples, d)
-#             graph = build_decoding_graph(d, p, p)
-#             corrections = graph.decode_batch(defects)
-#             logical_outcomes = np.sum((samples + corrections) % 2, axis=1) > (d - 1) / 2
-#             pL = sum(logical_outcomes.astype(int)) / n_runs
-#             pL_list.append(pL)
-#         results[d] = pL_list
+    for d in distances:
+        pL_list = []
+        print(f"\nSimulating for d = {d}")
+        for p in tqdm(probabilities):
+            circuit = generate_repetition_code_circuit(d, p, p)
+            samples = measurement_sampler(circuit, n_runs=n_runs)
+            defects = process_measurements(samples, d)
+            graph = build_decoding_graph(d, p, p)
+            corrections = graph.decode_batch(defects)
 
-#     # Estimate threshold
-#     threshold_p = None
-#     for i in range(len(probabilities) - 1):
-#         pL_prev_dist = -1
-#         for d in distances:
-#             if i > 0 and pL_prev_dist > 0 and pL_prev_dist < results[d][i]:
-#                 threshold_p = (probabilities[i - 1] + probabilities[i]) / 2
-#                 break
-#             pL_prev_dist = results[d][i]
-#         if threshold_p is not None:
-#             break
+            # Step 1: Extract final data qubit measurements (last d bits of each sample)
+            final_data = samples[:, -d:]
 
-#     # Plotting
-#     plt.figure(figsize=(10, 6))
-#     for d in distances:
-#         plt.plot(probabilities, results[d], label=f"d = {d}")
+            # Step 2: Apply the corrections (which flips certain data qubits)
+            corrected_data = (final_data + corrections) % 2  # shape: (n_runs, d)
 
-#     # Plot threshold marker
-#     plt.axvline(
-#         x=threshold_p,
-#         color="red",
-#         linestyle="--",
-#         label=f"Estimated threshold ≈ {threshold_p:.2f}",
-#     )
-#     plt.xlabel("Physical error rate p")
-#     plt.ylabel("Logical error rate pL")
-#     plt.title("MWPM: Repetition Code Logical vs Physical Error Rate")
-#     plt.legend()
-#     plt.grid(True)
-#     plt.yscale("log")
-#     plt.savefig("images/problem_2/mwpm.png")
+            # Step 3: Majority vote decoder — logical 1 if more than half qubits are 1
+            logical_outcomes = np.sum(corrected_data, axis=1) > (d - 1) / 2
 
-#     return threshold_p, probabilities, results
+            pL = sum(logical_outcomes.astype(int)) / n_runs
+            pL_list.append(pL)
+        results[d] = pL_list
+
+    # Estimate threshold
+    threshold_p = None
+    for i in range(len(probabilities) - 1):
+        pL_prev_dist = -1
+        for d in distances:
+            if i > 0 and pL_prev_dist > 0 and pL_prev_dist < results[d][i]:
+                threshold_p = (probabilities[i - 1] + probabilities[i]) / 2
+                break
+            pL_prev_dist = results[d][i]
+        if threshold_p is not None:
+            break
+
+    # Plotting
+    plt.figure(figsize=(10, 6))
+    for d in distances:
+        plt.plot(probabilities, results[d], label=f"d = {d}")
+
+    # Plot threshold marker
+    plt.axvline(
+        x=threshold_p,
+        color="red",
+        linestyle="--",
+        label=f"Estimated threshold ≈ {threshold_p:.2f}",
+    )
+    plt.xlabel("Physical error rate p")
+    plt.ylabel("Logical error rate pL")
+    plt.title("MWPM: Repetition Code Logical vs Physical Error Rate")
+    plt.legend()
+    plt.grid(True)
+    plt.yscale("log")
+    plt.savefig("images/problem_2/mwpm.png")
+
+    return threshold_p, probabilities, results
