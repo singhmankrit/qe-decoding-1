@@ -122,48 +122,31 @@ def process_measurements(sampled_runs, d):
         for t in range(n_rounds):
             for i in range(n_ancillas):
                 if t == 0:
-                    defects_in_this_run.append(int(syndrome_in_this_run[0][i]))
+                    defects_in_this_run.append(syndrome_in_this_run[0][i])
                 else:
                     defect = syndrome_in_this_run[t][i] ^ syndrome_in_this_run[t - 1][i]
-                    defects_in_this_run.append(int(defect))
+                    defects_in_this_run.append(defect)
         defects.append(defects_in_this_run)
-    return defects
+    return np.array(defects, dtype=int)
 
 
-# # Problem 2D
-# def build_decoding_graph(d, p, q):
-#     graph = pymatching.Matching()
-#     n_rounds = d
-#     n_ancillas = d - 1
+# Problem 2D
+def build_decoding_graph(d, p, q):
+    graph = pymatching.Matching()
+    weight_data = -np.log(p)
+    weight_ancilla = -np.log(q)
 
-#     def detector_id(i, t):
-#         """Map stabilizer i at time t to a unique node ID."""
-#         return i + t * n_ancillas
+    # # Boundary edges: qubit 0 and qubit d-1
+    # graph.add_boundary_edge(0, weight=weight, fault_ids={0}, error_probability=p)
+    # graph.add_boundary_edge(
+    #     d - 2, weight=weight, fault_ids={d - 1}, error_probability=p
+    # )
 
-#     total_detectors = n_rounds * n_ancillas
-#     boundary_node = total_detectors
+    # # Internal edges: qubit 1 to d-2
+    # for i in range(1, d - 1):
+    #     graph.add_edge(i - 1, i, weight=weight, fault_ids={i}, error_probability=p)
 
-#     # Spatial edges (within same round)
-#     for t in range(n_rounds):
-#         for i in range(n_ancillas - 1):
-#             a = detector_id(i, t)
-#             b = detector_id(i + 1, t)
-#             graph.add_edge(a, b, weight=-np.log(p))
-
-#     # Temporal edges (same stabilizer across rounds)
-#     for t in range(n_rounds):
-#         for i in range(n_ancillas):
-#             a = detector_id(i, t)
-#             b = detector_id(i, t + 1)
-#             graph.add_edge(a, b, weight=-np.log(q))
-
-#     # Boundary edges
-#     for t in range(n_rounds):
-#         for i in range(n_ancillas):
-#             node = detector_id(i, t)
-#             graph.add_boundary_edge(node, boundary_node, weight=-np.log(q))
-
-#     return graph
+    # return graph.decode_batch(syndromes)
 
 
 # # Problem 2E
