@@ -145,8 +145,6 @@ def build_decoding_graph(d, p, q):
     """
 
     graph = pymatching.Matching()
-    weight_space = -np.log(p)  # data qubit errors
-    weight_time = -np.log(q)  # ancilla qubit errors
 
     def get_index(d, t, i):
         return (d - 1) * t + i
@@ -156,78 +154,42 @@ def build_decoding_graph(d, p, q):
         for i in range(1, d - 1):  # loop over space
             a = get_index(d, t, i - 1)
             b = get_index(d, t, i)
-            graph.add_edge(
-                a, b, weight=weight_space, error_probability=p, fault_ids={a, b}
-            )
+            graph.add_edge(a, b, error_probability=p, fault_ids={i})
 
     # adding time-like edges
     for t in range(1, d):  # loop over time
         for i in range(d - 1):  # loop over space
             a = get_index(d, t - 1, i)
             b = get_index(d, t, i)
-            graph.add_edge(
-                a, b, weight=weight_time, error_probability=q, fault_ids={a, b}
-            )
+            graph.add_edge(a, b, error_probability=q, fault_ids=set())
 
-    weight_corner = -np.log(p * (1 - q) + q * (1 - p))
+    p_corner = p * (1 - q) + q * (1 - p)
 
     # Boundary edges:
     for t in range(d):
         for i in range(d - 1):
             idx = get_index(d, t, i)
-            # corners
-            if t == 0 and i == 0:
+
+            is_corner = (t in [0, d - 1]) and (i in [0, d - 2])
+            is_edge_t = t in [0, d - 1]
+            is_edge_i = i in [0, d - 2]
+
+            if is_corner:
+                if i == 0:
+                    fault_id = 0
+                else:
+                    fault_id = d - 1
                 graph.add_boundary_edge(
-                    idx,
-                    weight=weight_corner,
-                    error_probability=p * (1 - q) + q * (1 - p),
-                    fault_ids={idx},
+                    idx, error_probability=p_corner, fault_ids={fault_id}
                 )
                 graph.set_boundary_nodes({idx})
-            elif t == 0 and i == d - 2:
-                graph.add_boundary_edge(
-                    idx,
-                    weight=weight_corner,
-                    error_probability=p * (1 - q) + q * (1 - p),
-                    fault_ids={idx},
-                )
+
+            elif is_edge_t:
+                graph.add_boundary_edge(idx, error_probability=p, fault_ids={i})
                 graph.set_boundary_nodes({idx})
-            elif t == d - 1 and i == 0:
-                graph.add_boundary_edge(
-                    idx,
-                    weight=weight_corner,
-                    error_probability=p * (1 - q) + q * (1 - p),
-                    fault_ids={idx},
-                )
-                graph.set_boundary_nodes({idx})
-            elif t == d - 1 and i == d - 2:
-                graph.add_boundary_edge(
-                    idx,
-                    weight=weight_corner,
-                    error_probability=p * (1 - q) + q * (1 - p),
-                    fault_ids={idx},
-                )
-                graph.set_boundary_nodes({idx})
-            # edges
-            elif t == 0:
-                graph.add_boundary_edge(
-                    idx, weight=weight_time, error_probability=q, fault_ids={idx}
-                )
-                graph.set_boundary_nodes({idx})
-            elif t == d - 1:
-                graph.add_boundary_edge(
-                    idx, weight=weight_time, error_probability=q, fault_ids={idx}
-                )
-                graph.set_boundary_nodes({idx})
-            elif i == 0:
-                graph.add_boundary_edge(
-                    idx, weight=weight_space, error_probability=p, fault_ids={idx}
-                )
-                graph.set_boundary_nodes({idx})
-            elif i == d - 2:
-                graph.add_boundary_edge(
-                    idx, weight=weight_space, error_probability=p, fault_ids={idx}
-                )
+
+            elif is_edge_i:
+                graph.add_boundary_edge(idx, error_probability=q, fault_ids=set())
                 graph.set_boundary_nodes({idx})
 
     return graph
