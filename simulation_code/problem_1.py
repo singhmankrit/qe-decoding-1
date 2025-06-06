@@ -193,9 +193,7 @@ def simulate_threshold_mwpm(n_runs=10**6):
         n_runs (int): The number of runs to perform at each physical error rate.
 
     Returns:
-        tuple: A tuple containing the estimated threshold error rate, an array
-               of physical error rates, and a dictionary of logical error rates
-               for each code distance.
+        threshold: The estimated threshold error rate.
     """
 
     distances = [3, 5, 7, 9]
@@ -247,4 +245,4 @@ def simulate_threshold_mwpm(n_runs=10**6):
     plt.yscale("log")
     plt.savefig("images/problem_1/mwpm.png")
 
-    return threshold_p, probabilities, results
+    return threshold_p

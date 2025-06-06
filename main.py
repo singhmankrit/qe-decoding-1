@@ -1,5 +1,4 @@
 from simulation_code import problem_1, problem_2
-import matplotlib.pyplot as plt
 
 # Problem 1
 
@@ -8,26 +7,11 @@ import matplotlib.pyplot as plt
 # print(f"Estimated threshold (Majority Voting): {threshold_mv}")
 
 # # Minimum Weight Perfect Matching
-# threshold_mwpm, _, _ = problem_1.simulate_threshold_mwpm(n_runs=10**4)
+# threshold_mwpm = problem_1.simulate_threshold_mwpm(n_runs=10**4)
 # print(f"Estimated threshold (MWPM): {threshold_mwpm}")
 
 # Problem 2
 
-# d = 5
-# p = 0.1
-# n_runs = 3
-# circuit = problem_2.generate_repetition_code_circuit(d, p, p)
-# print(circuit.diagram())
-# samples = problem_2.measurement_sampler(circuit, n_runs)
-# print(samples)
-# graph = problem_2.build_decoding_graph(d, p, p)
-# plt.figure()
-# graph.draw()
-# plt.savefig("graph.png")
-# defects = problem_2.process_measurements(samples, d)
-# print(defects)
-# corrections = graph.decode_batch(defects)
-# print("Corrections:", corrections)
-
-threshold_mwpm, _, _ = problem_2.simulate_threshold_mwpm(n_runs=10**4)
-print(f"Estimated threshold (MWPM): {threshold_mwpm}")
+# Minimum Weight Perfect Matching for Multiple Ancilla Measurements
+threshold_w_ancilla = problem_2.simulate_threshold_mwpm(n_runs=10**5)
+print(f"Estimated threshold (with Ancillas): {threshold_w_ancilla}")

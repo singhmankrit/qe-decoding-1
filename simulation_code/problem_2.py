@@ -133,12 +133,13 @@ def process_measurements(sampled_runs, d):
 # Problem 2D
 def build_decoding_graph(d, p, q):
     """
-    Builds a decoding graph for the repetition code.
+    Builds a decoding graph for a distance-d surface code with separate
+    phenomenological bit-flip noise on data and ancilla qubits.
 
     Args:
-        d (int): The number of rounds.
-        p (float): The probability of a bit-flip error on a data qubit.
-        q (float): The probability of a bit-flip error on an ancilla qubit.
+        d (int): The code distance.
+        p (float): The probability of a bit-flip (X error) on each data qubit.
+        q (float): The probability of a bit-flip (X error) on each ancilla qubit.
 
     Returns:
         pymatching.Matching: The decoding graph.
@@ -182,17 +183,27 @@ def build_decoding_graph(d, p, q):
                 graph.add_boundary_edge(
                     idx, error_probability=p_corner, fault_ids={fault_id}
                 )
-                graph.set_boundary_nodes({idx})
 
             elif is_edge_i:
-                graph.add_boundary_edge(idx, error_probability=q, fault_ids={fault_id})
-                graph.set_boundary_nodes({idx})
+                graph.add_boundary_edge(idx, error_probability=p, fault_ids={fault_id})
 
     return graph
 
 
 # Problem 2E
 def simulate_threshold_mwpm(n_runs=10**6):
+    """
+    Simulates the logical error rate of the repetition code using the minimum
+    weight perfect matching (MWPM) algorithm for various physical error rates
+    and code distances, and plots the results.
+
+    Args:
+        n_runs (int): The number of runs to perform at each physical error rate.
+
+    Returns:
+        threshold: The estimated threshold error rate.
+    """
+
     distances = [3, 5, 7, 9]
     probabilities = np.linspace(0.05, 0.15, 20)
     results = {}
@@ -218,8 +229,8 @@ def simulate_threshold_mwpm(n_runs=10**6):
     threshold_p = None
     for i in range(len(probabilities) - 1):
         pL_prev_dist = -1
-        for d in distances:
-            if i > 0 and pL_prev_dist > 0 and pL_prev_dist < results[d][i]:
+        for d in distances[::-1]:
+            if i > 0 and pL_prev_dist > 0 and pL_prev_dist > results[d][i]:
                 threshold_p = (probabilities[i - 1] + probabilities[i]) / 2
                 break
             pL_prev_dist = results[d][i]
@@ -240,10 +251,10 @@ def simulate_threshold_mwpm(n_runs=10**6):
     )
     plt.xlabel("Physical error rate p")
     plt.ylabel("Logical error rate pL")
-    plt.title("MWPM: Repetition Code Logical vs Physical Error Rate")
+    plt.title("Minimum Weight Perfect Matching with Ancillas")
     plt.legend()
     plt.grid(True)
     plt.yscale("log")
     plt.savefig("images/problem_2/mwpm.png")
 
-    return threshold_p, probabilities, results
+    return threshold_p
