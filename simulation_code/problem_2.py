@@ -171,25 +171,21 @@ def build_decoding_graph(d, p, q):
             idx = get_index(d, t, i)
 
             is_corner = (t in [0, d - 1]) and (i in [0, d - 2])
-            is_edge_t = t in [0, d - 1]
             is_edge_i = i in [0, d - 2]
 
+            if i == 0:
+                fault_id = 0
+            else:
+                fault_id = d - 1
+
             if is_corner:
-                if i == 0:
-                    fault_id = 0
-                else:
-                    fault_id = d - 1
                 graph.add_boundary_edge(
                     idx, error_probability=p_corner, fault_ids={fault_id}
                 )
                 graph.set_boundary_nodes({idx})
 
-            elif is_edge_t:
-                graph.add_boundary_edge(idx, error_probability=p, fault_ids={i})
-                graph.set_boundary_nodes({idx})
-
             elif is_edge_i:
-                graph.add_boundary_edge(idx, error_probability=q, fault_ids=set())
+                graph.add_boundary_edge(idx, error_probability=q, fault_ids={fault_id})
                 graph.set_boundary_nodes({idx})
 
     return graph
@@ -210,17 +206,10 @@ def simulate_threshold_mwpm(n_runs=10**6):
             defects = process_measurements(samples, d)
             graph = build_decoding_graph(d, p, p)
             corrections = graph.decode_batch(defects)
-
-            # Step 1: Extract final data qubit measurements (last d bits of each sample)
             final_data = samples[:, -d:]
-            data_corrections = corrections[:, -d:]
-
-            # Step 2: Apply the corrections (which flips certain data qubits)
-            corrected_data = (final_data + data_corrections) % 2  # shape: (n_runs, d)
-
-            # Step 3: Majority vote decoder — logical 1 if more than half qubits are 1
-            logical_outcomes = np.sum(corrected_data, axis=1) > (d - 1) / 2
-
+            logical_outcomes = (
+                np.sum((final_data + corrections) % 2, axis=1) > (d - 1) / 2
+            )
             pL = sum(logical_outcomes.astype(int)) / n_runs
             pL_list.append(pL)
         results[d] = pL_list
