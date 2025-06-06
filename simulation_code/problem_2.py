@@ -1,5 +1,8 @@
 import stim
+import pymatching
 import numpy as np
+import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 
 # Problem 2A
@@ -88,37 +91,25 @@ def measurement_sampler(circuit, n_runs, seed=42):
 # Problem 2C
 def process_measurements(sampled_runs, d):
     """
-    Process measurement outcomes from a circuit that measures the repetition code.
+    Process the measurement outcomes to detect defects (syndrome flip in time)
 
-    Parameters
-    ----------
-    sampled_runs : np.ndarray
-        A 2D array of measurement outcomes, with each row corresponding to a run
-        and each column to a measured qubit.
-    d : int
-        The code distance.
+    Args:
+        sampled_runs (np.ndarray): The sampled measurement outcomes
+        d (int): The number of rounds
 
-    Returns
-    -------
-    tuple
-        A tuple containing two elements:
-
-        - syndromes: A list of 2D arrays, where each array represents the syndrome
-          measured in a run, with each row corresponding to a round of error
-          correction and each column to an ancilla qubit.
-        - defects: A list of lists of tuples, where each tuple represents a defect
-          (i.e., a syndrome flip in time) in a run, and the tuple contains the
-          time and location of the defect.
+    Returns:
+        list: A list of defects, where each element is a list of defects in one
+              run and each element is a list of defects in each round
     """
-    syndromes = []
+
     defects = []
     for run in sampled_runs:
-        n_rounds = d - 1
+        n_rounds = d
         n_ancillas = d - 1
 
         # Syndromes
-        measured_syndromes = np.array(run[: n_rounds * n_ancillas]).reshape(
-            n_rounds, n_ancillas
+        measured_syndromes = np.array(run[: n_ancillas * n_ancillas]).reshape(
+            n_ancillas, n_ancillas
         )
         final_data = np.array(run[-d:])
         projected_syndrome = np.array(
@@ -130,9 +121,140 @@ def process_measurements(sampled_runs, d):
         defects_in_this_run = []
         for t in range(n_rounds):
             for i in range(n_ancillas):
-                if syndrome_in_this_run[t, i] != syndrome_in_this_run[t + 1, i]:
-                    defects_in_this_run.append((t, i))  # (time, location)
-
-        syndromes.append(syndrome_in_this_run)
+                if t == 0:
+                    defects_in_this_run.append(syndrome_in_this_run[0][i])
+                else:
+                    defect = syndrome_in_this_run[t][i] ^ syndrome_in_this_run[t - 1][i]
+                    defects_in_this_run.append(defect)
         defects.append(defects_in_this_run)
-    return syndromes, defects
+    return np.array(defects, dtype=int)
+
+
+# Problem 2D
+def build_decoding_graph(d, p, q):
+    """
+    Builds a decoding graph for a distance-d surface code with separate
+    phenomenological bit-flip noise on data and ancilla qubits.
+
+    Args:
+        d (int): The code distance.
+        p (float): The probability of a bit-flip (X error) on each data qubit.
+        q (float): The probability of a bit-flip (X error) on each ancilla qubit.
+
+    Returns:
+        pymatching.Matching: The decoding graph.
+    """
+
+    graph = pymatching.Matching()
+
+    def get_index(d, t, i):
+        return (d - 1) * t + i
+
+    # adding space-like edges
+    for t in range(d):  # loop over time
+        for i in range(1, d - 1):  # loop over space
+            a = get_index(d, t, i - 1)
+            b = get_index(d, t, i)
+            graph.add_edge(a, b, error_probability=p, fault_ids={i})
+
+    # adding time-like edges
+    for t in range(1, d):  # loop over time
+        for i in range(d - 1):  # loop over space
+            a = get_index(d, t - 1, i)
+            b = get_index(d, t, i)
+            graph.add_edge(a, b, error_probability=q, fault_ids=set())
+
+    p_corner = p * (1 - q) + q * (1 - p)
+
+    # Boundary edges:
+    for t in range(d):
+        for i in range(d - 1):
+            idx = get_index(d, t, i)
+
+            is_corner = (t in [0, d - 1]) and (i in [0, d - 2])
+            is_edge_i = i in [0, d - 2]
+
+            if i == 0:
+                fault_id = 0
+            else:
+                fault_id = d - 1
+
+            if is_corner:
+                graph.add_boundary_edge(
+                    idx, error_probability=p_corner, fault_ids={fault_id}
+                )
+
+            elif is_edge_i:
+                graph.add_boundary_edge(idx, error_probability=p, fault_ids={fault_id})
+
+    return graph
+
+
+# Problem 2E
+def simulate_threshold_mwpm(n_runs=10**6):
+    """
+    Simulates the logical error rate of the repetition code using the minimum
+    weight perfect matching (MWPM) algorithm for various physical error rates
+    and code distances, and plots the results.
+
+    Args:
+        n_runs (int): The number of runs to perform at each physical error rate.
+
+    Returns:
+        threshold: The estimated threshold error rate.
+    """
+
+    distances = [3, 5, 7, 9]
+    probabilities = np.linspace(0.05, 0.15, 20)
+    results = {}
+
+    for d in distances:
+        pL_list = []
+        print(f"\nSimulating for d = {d}")
+        for p in tqdm(probabilities):
+            circuit = generate_repetition_code_circuit(d, p, p)
+            samples = measurement_sampler(circuit, n_runs=n_runs)
+            defects = process_measurements(samples, d)
+            graph = build_decoding_graph(d, p, p)
+            corrections = graph.decode_batch(defects)
+            final_data = samples[:, -d:]
+            logical_outcomes = (
+                np.sum((final_data + corrections) % 2, axis=1) > (d - 1) / 2
+            )
+            pL = sum(logical_outcomes.astype(int)) / n_runs
+            pL_list.append(pL)
+        results[d] = pL_list
+
+    # Estimate threshold
+    threshold_p = None
+    for i in range(len(probabilities) - 1):
+        pL_prev_dist = -1
+        for d in distances[::-1]:
+            if i > 0 and pL_prev_dist > 0 and pL_prev_dist > results[d][i]:
+                threshold_p = (probabilities[i - 1] + probabilities[i]) / 2
+                break
+            pL_prev_dist = results[d][i]
+        if threshold_p is not None:
+            break
+
+    # Plotting
+    plt.figure(figsize=(10, 6))
+    for d in distances:
+        plt.plot(probabilities, results[d], label=f"d = {d}")
+
+    # Plot threshold marker
+    plt.axvline(
+        x=threshold_p,
+        color="red",
+        linestyle="--",
+        label=f"Estimated threshold ≈ {threshold_p:.2f}",
+    )
+    plt.xlabel("Physical error rate p")
+    plt.ylabel("Logical error rate pL")
+    plt.title("Minimum Weight Perfect Matching with Ancillas")
+    plt.legend()
+    plt.grid(True)
+    plt.yscale("log")
+    plt.savefig("images/problem_2/mwpm.png")
+
+    return threshold_p
