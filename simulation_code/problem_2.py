@@ -155,23 +155,19 @@ def build_decoding_graph(d, p, q):
         for i in range(1, d - 1):  # loop over space
             a = get_index(d, t, i - 1)
             b = get_index(d, t, i)
-            graph.add_edge(a, b, error_probability=p * (1 - q), fault_ids={i})
+            graph.add_edge(a, b, error_probability=p, fault_ids={i})
 
     # adding time-like edges
     for t in range(1, d):  # loop over time
         for i in range(d - 1):  # loop over space
             a = get_index(d, t - 1, i)
             b = get_index(d, t, i)
-            graph.add_edge(a, b, error_probability=q * (1 - p), fault_ids=set())
-
-    p_corner = p * (1 - q) + q * (1 - p)
+            graph.add_edge(a, b, error_probability=q, fault_ids=set())
 
     # Boundary edges:
     for t in range(d):
         for i in range(d - 1):
             idx = get_index(d, t, i)
-
-            is_corner = (t in [0, d - 1]) and (i in [0, d - 2])
             is_edge = i in [0, d - 2]
 
             if i == 0:
@@ -179,15 +175,8 @@ def build_decoding_graph(d, p, q):
             else:
                 fault_id = d - 1
 
-            if is_corner:
-                graph.add_boundary_edge(
-                    idx, error_probability=p_corner, fault_ids={fault_id}
-                )
-
-            elif is_edge:
-                graph.add_boundary_edge(
-                    idx, error_probability=q * (1 - p), fault_ids=set()
-                )
+            if is_edge:
+                graph.add_boundary_edge(idx, error_probability=p, fault_ids={fault_id})
 
     return graph
 
@@ -220,10 +209,8 @@ def simulate_threshold_mwpm(n_runs=10**6):
             graph = build_decoding_graph(d, p, p)
             corrections = graph.decode_batch(defects)
             final_data = samples[:, -d:]
-            logical_outcomes = (
-                np.sum((final_data + corrections) % 2, axis=1) > (d - 1) / 2
-            )
-            pL = sum(logical_outcomes.astype(int)) / n_runs
+            logical_outcomes = np.sum((final_data + corrections) % 2, axis=1) % 2
+            pL = sum(logical_outcomes) / n_runs
             pL_list.append(pL)
         results[d] = pL_list
 
