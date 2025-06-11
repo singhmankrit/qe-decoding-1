@@ -164,34 +164,25 @@ def build_decoding_graph(d, p, q):
             b = get_index(d, t, i)
             graph.add_edge(a, b, error_probability=q, fault_ids=set())
 
-    p_corner = p * (1 - q) + q * (1 - p)
-
     # Boundary edges:
     for t in range(d):
         for i in range(d - 1):
             idx = get_index(d, t, i)
-
-            is_corner = (t in [0, d - 1]) and (i in [0, d - 2])
-            is_edge_i = i in [0, d - 2]
+            is_edge = i in [0, d - 2]
 
             if i == 0:
                 fault_id = 0
             else:
                 fault_id = d - 1
 
-            if is_corner:
-                graph.add_boundary_edge(
-                    idx, error_probability=p_corner, fault_ids={fault_id}
-                )
-
-            elif is_edge_i:
+            if is_edge:
                 graph.add_boundary_edge(idx, error_probability=p, fault_ids={fault_id})
 
     return graph
 
 
 # Problem 2E
-def simulate_threshold_mwpm(n_runs=10**6):
+def simulate_threshold(n_runs=10**6):
     """
     Simulates the logical error rate of the repetition code using the minimum
     weight perfect matching (MWPM) algorithm for various physical error rates
@@ -218,10 +209,8 @@ def simulate_threshold_mwpm(n_runs=10**6):
             graph = build_decoding_graph(d, p, p)
             corrections = graph.decode_batch(defects)
             final_data = samples[:, -d:]
-            logical_outcomes = (
-                np.sum((final_data + corrections) % 2, axis=1) > (d - 1) / 2
-            )
-            pL = sum(logical_outcomes.astype(int)) / n_runs
+            logical_outcomes = np.sum((final_data ^ corrections), axis=1) % 2
+            pL = sum(logical_outcomes) / n_runs
             pL_list.append(pL)
         results[d] = pL_list
 
@@ -229,8 +218,8 @@ def simulate_threshold_mwpm(n_runs=10**6):
     threshold_p = None
     for i in range(len(probabilities) - 1):
         pL_prev_dist = -1
-        for d in distances[::-1]:
-            if i > 0 and pL_prev_dist > 0 and pL_prev_dist > results[d][i]:
+        for d in distances:
+            if i > 0 and pL_prev_dist > 0 and pL_prev_dist < results[d][i]:
                 threshold_p = (probabilities[i - 1] + probabilities[i]) / 2
                 break
             pL_prev_dist = results[d][i]
@@ -247,7 +236,7 @@ def simulate_threshold_mwpm(n_runs=10**6):
         x=threshold_p,
         color="red",
         linestyle="--",
-        label=f"Estimated threshold ≈ {threshold_p:.2f}",
+        label=f"Estimated threshold ≈ {threshold_p:.3f}",
     )
     plt.xlabel("Physical error rate p")
     plt.ylabel("Logical error rate pL")
@@ -255,6 +244,6 @@ def simulate_threshold_mwpm(n_runs=10**6):
     plt.legend()
     plt.grid(True)
     plt.yscale("log")
-    plt.savefig("images/problem_2/mwpm.png")
+    plt.savefig("images/problem_2/threshold_w_ancillas.png")
 
     return threshold_p
