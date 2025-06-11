@@ -218,8 +218,8 @@ def simulate_threshold(n_runs=10**6):
     threshold_p = None
     for i in range(len(probabilities) - 1):
         pL_prev_dist = -1
-        for d in distances[::-1]:
-            if i > 0 and pL_prev_dist > 0 and pL_prev_dist > results[d][i]:
+        for d in distances:
+            if i > 0 and pL_prev_dist > 0 and pL_prev_dist < results[d][i]:
                 threshold_p = (probabilities[i - 1] + probabilities[i]) / 2
                 break
             pL_prev_dist = results[d][i]
