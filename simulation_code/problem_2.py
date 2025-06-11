@@ -209,7 +209,7 @@ def simulate_threshold_mwpm(n_runs=10**6):
             graph = build_decoding_graph(d, p, p)
             corrections = graph.decode_batch(defects)
             final_data = samples[:, -d:]
-            logical_outcomes = np.sum((final_data + corrections) % 2, axis=1) % 2
+            logical_outcomes = np.sum((final_data ^ corrections), axis=1) % 2
             pL = sum(logical_outcomes) / n_runs
             pL_list.append(pL)
         results[d] = pL_list
