@@ -5,7 +5,7 @@ from simulation_code import problem_1, problem_2
 # ==================================================================
 
 # Majority Voting
-threshold_mv, _, _ = problem_1.simulate_threshold_mv(n_runs=10**6)
+threshold_mv = problem_1.simulate_threshold_mv(n_runs=10**6)
 print(f"Estimated threshold (Majority Voting): {threshold_mv}")
 
 # Minimum Weight Perfect Matching

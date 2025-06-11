@@ -133,7 +133,7 @@ def simulate_threshold_mv(n_runs=10**6):
     plt.yscale("log")
     plt.savefig("images/problem_1/majority_voting.png")
 
-    return threshold_p, probabilities, results
+    return threshold_p
 
 
 # Problem 1E
