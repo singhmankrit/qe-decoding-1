@@ -208,8 +208,8 @@ def simulate_threshold_mwpm(n_runs=10**6):
             samples = measurement_sampler(circuit, n_runs=n_runs)
             syndromes = extract_syndromes(samples)
             corrections = decoding_graph_mwpm(d, p, syndromes)
-            logical_outcomes = np.sum((samples + corrections) % 2, axis=1) > (d - 1) / 2
-            pL = sum(logical_outcomes.astype(int)) / n_runs
+            logical_outcomes = np.sum((samples ^ corrections), axis=1) % 2
+            pL = sum(logical_outcomes) / n_runs
             pL_list.append(pL)
         results[d] = pL_list
 
