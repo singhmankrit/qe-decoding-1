@@ -182,7 +182,7 @@ def build_decoding_graph(d, p, q):
 
 
 # Problem 2E
-def simulate_threshold_mwpm(n_runs=10**6):
+def simulate_threshold(n_runs=10**6):
     """
     Simulates the logical error rate of the repetition code using the minimum
     weight perfect matching (MWPM) algorithm for various physical error rates
@@ -236,7 +236,7 @@ def simulate_threshold_mwpm(n_runs=10**6):
         x=threshold_p,
         color="red",
         linestyle="--",
-        label=f"Estimated threshold ≈ {threshold_p:.2f}",
+        label=f"Estimated threshold ≈ {threshold_p:.3f}",
     )
     plt.xlabel("Physical error rate p")
     plt.ylabel("Logical error rate pL")
@@ -244,76 +244,6 @@ def simulate_threshold_mwpm(n_runs=10**6):
     plt.legend()
     plt.grid(True)
     plt.yscale("log")
-    plt.savefig("images/problem_2/mwpm.png")
-
-    return threshold_p
-
-
-# Problem 3A
-def simulate_threshold_mwpm_bias(n_runs=10**6):
-    """
-    Simulates the logical error rate of the repetition code using the minimum
-    weight perfect matching (MWPM) algorithm for various physical error rates
-    and code distances, and plots the results.
-
-    Args:
-        n_runs (int): The number of runs to perform at each physical error rate.
-
-    Returns:
-        threshold: The estimated threshold error rate.
-    """
-
-    distances = [3, 5, 7, 9]
-    probabilities = np.linspace(0.05, 0.15, 20)
-    results = {}
-
-    for d in distances:
-        pL_list = []
-        print(f"\nSimulating for d = {d}")
-        for p in tqdm(probabilities):
-            circuit = generate_repetition_code_circuit(d, p, 2 * p)
-            samples = measurement_sampler(circuit, n_runs=n_runs)
-            defects = process_measurements(samples, d)
-            graph = build_decoding_graph(d, p, 2 * p)
-            corrections = graph.decode_batch(defects)
-            final_data = samples[:, -d:]
-            logical_outcomes = (
-                np.sum((final_data + corrections) % 2, axis=1) > (d - 1) / 2
-            )
-            pL = sum(logical_outcomes.astype(int)) / n_runs
-            pL_list.append(pL)
-        results[d] = pL_list
-
-    # Estimate threshold
-    threshold_p = None
-    for i in range(len(probabilities) - 1):
-        pL_prev_dist = -1
-        for d in distances[::-1]:
-            if i > 0 and pL_prev_dist > 0 and pL_prev_dist > results[d][i]:
-                threshold_p = (probabilities[i - 1] + probabilities[i]) / 2
-                break
-            pL_prev_dist = results[d][i]
-        if threshold_p is not None:
-            break
-
-    # Plotting
-    plt.figure(figsize=(10, 6))
-    for d in distances:
-        plt.plot(probabilities, results[d], label=f"d = {d}")
-
-    # Plot threshold marker
-    plt.axvline(
-        x=threshold_p,
-        color="red",
-        linestyle="--",
-        label=f"Estimated threshold ≈ {threshold_p:.2f}",
-    )
-    plt.xlabel("Physical error rate p")
-    plt.ylabel("Logical error rate pL")
-    plt.title("Minimum Weight Perfect Matching with Ancillas")
-    plt.legend()
-    plt.grid(True)
-    plt.yscale("log")
-    plt.savefig("images/problem_3/mwpm_bias_weights_change.png")
+    plt.savefig("images/problem_2/threshold_w_ancillas.png")
 
     return threshold_p
