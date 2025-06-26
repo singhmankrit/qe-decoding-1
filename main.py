@@ -35,3 +35,11 @@ threshold_w_correct_graph = problem_3.simulate_threshold_bias_correct_graph(
 print(
     f"Estimated threshold (with biased noise, correct graph): {threshold_w_correct_graph}"
 )
+
+# ==================================================================
+# Bonus
+# ==================================================================
+
+# Minimum Weight Perfect Matching for no ancilla error
+threshold_bonus = problem_3.simulate_threshold_bias_bonus(n_runs=10**6)
+print(f"Estimated threshold (no ancilla error): {threshold_bonus}")
