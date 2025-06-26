@@ -199,10 +199,15 @@ def simulate_threshold(n_runs=10**6):
     threshold_p = None
     for i in range(len(probabilities) - 1):
         pL_prev_dist = -1
+        all_d = True
         for d in distances:
-            if i > 0 and pL_prev_dist > 0 and pL_prev_dist < results[d][i]:
-                threshold_p = (probabilities[i - 1] + probabilities[i]) / 2
-                break
+            if i > 0 and pL_prev_dist > 0:
+                if pL_prev_dist < results[d][i]:
+                    if d == distances[-1] and all_d:
+                        threshold_p = (probabilities[i - 1] + probabilities[i]) / 2
+                        break
+                else:
+                    all_d = False
             pL_prev_dist = results[d][i]
         if threshold_p is not None:
             break
