@@ -24,6 +24,14 @@ from simulation_code import problem_1, problem_2, problem_3
 # Problem 3
 # ==================================================================
 
-# Minimum Weight Perfect Matching for Biased Noise
-threshold_w_bias = problem_3.simulate_threshold_bias(n_runs=10**6)
-print(f"Estimated threshold (with biased noise): {threshold_w_bias}")
+# # Minimum Weight Perfect Matching for Biased Noise and Constant Weight Graph
+# threshold_w_bias = problem_3.simulate_threshold_bias(n_runs=10**6)
+# print(f"Estimated threshold (with biased noise, constant weight): {threshold_w_bias}")
+
+# Minimum Weight Perfect Matching for Biased Noise and Correct Graph
+threshold_w_correct_graph = problem_3.simulate_threshold_bias_correct_graph(
+    n_runs=10**6
+)
+print(
+    f"Estimated threshold (with biased noise, correct graph): {threshold_w_correct_graph}"
+)
