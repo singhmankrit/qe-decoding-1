@@ -30,41 +30,22 @@ def generate_repetition_code_circuit(d, p, q):
         circuit.append("R", [qubit])
 
     for _ in range(d - 1):
-        # Errors for data qubits
-        for qubit in range(d):
-            circuit.append("X_ERROR", [qubit], p)
+        for i in range(total_qubits):
+            if i % 2 == 0:
+                circuit.append_operation("X_ERROR", [i], p)
+            else:
+                circuit.append_operation("X_ERROR", [i], q)
 
-        # Errors for ancilla qubits
-        for qubit in range(d, total_qubits):
-            circuit.append("X_ERROR", [qubit], q)
+        for i in range(1, total_qubits, 2):
+            circuit.append_operation("CNOT", [i - 1, i])
+            circuit.append_operation("CNOT", [i + 1, i])
+            circuit.append_operation("M", [i])
+            circuit.append_operation("R", [i])
 
-        # Hadamard for ancilla qubits
-        for qubit in range(d, total_qubits):
-            circuit.append("H", [qubit])
-
-        # 1st set of CZ
-        for qubit in range(d, total_qubits):
-            circuit.append("CZ", [qubit, qubit - d + 1])
-
-        # 2nd set of CZ
-        for qubit in range(d, total_qubits):
-            circuit.append("CZ", [qubit, qubit - d])
-
-        # Hadamard for ancilla qubits
-        for qubit in range(d, total_qubits):
-            circuit.append("H", [qubit])
-
-        # Measure ancilla qubits
-        for qubit in range(d, total_qubits):
-            circuit.append("MZ", [qubit])
-
-        # Reset ancilla qubits
-        for qubit in range(d, total_qubits):
-            circuit.append("R", [qubit])
-
-    # Measure data qubits
-    for qubit in range(d):
-        circuit.append("MZ", [qubit])
+    # Measure in Z basis
+    for i in range(0, total_qubits, 2):
+        circuit.append_operation("X_ERROR", [i], p)
+        circuit.append_operation("M", [i])
 
     return circuit
 
@@ -218,10 +199,16 @@ def simulate_threshold(n_runs=10**6):
     threshold_p = None
     for i in range(len(probabilities) - 1):
         pL_prev_dist = -1
+        all_d = True
         for d in distances:
-            if i > 0 and pL_prev_dist > 0 and pL_prev_dist < results[d][i]:
-                threshold_p = (probabilities[i - 1] + probabilities[i]) / 2
-                break
+            if i > 0 and pL_prev_dist > 0:
+                # Only when the pL of distances is in increasing order do we mark the threshold
+                if pL_prev_dist < results[d][i]:
+                    if d == distances[-1] and all_d:
+                        threshold_p = (probabilities[i - 1] + probabilities[i]) / 2
+                        break
+                else:
+                    all_d = False
             pL_prev_dist = results[d][i]
         if threshold_p is not None:
             break
