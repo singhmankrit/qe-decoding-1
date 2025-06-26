@@ -202,6 +202,7 @@ def simulate_threshold(n_runs=10**6):
         all_d = True
         for d in distances:
             if i > 0 and pL_prev_dist > 0:
+                # Only when the pL of distances is in increasing order do we mark the threshold
                 if pL_prev_dist < results[d][i]:
                     if d == distances[-1] and all_d:
                         threshold_p = (probabilities[i - 1] + probabilities[i]) / 2
