@@ -1,0 +1,1 @@
+This repository contains code for Quantum Error Correction Decoders. It is written with Stim and PyMatching, to create decoding graphs and calculate logical error rates for different distance error codes.
