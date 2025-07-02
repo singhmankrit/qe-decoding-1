@@ -1,3 +1,10 @@
-This repository contains code for Decoders in Quantum Error Correction for the repetition code with and without noisy ancilla qubit measurements. 
+# Quantum Error Correction Decoders
 
-It is written with Stim and PyMatching, and it involves creating decoding graphs and calculating logical error rates for different distance error codes, to find the error threshold.
+This repository implements decoders for Quantum Error Correction, focusing on the **repetition code** with both ideal and noisy ancilla measurements.
+
+## Key Features
+
+- Written in **Stim** (fast stabilizer circuit simulator) and **PyMatching** (MWPM decoder).
+- Generates decoding graphs for **Minimum Weight Perfect Matching (MWPM)** decoding.
+- Calculates **logical error rates** for various code distances.
+- Determines the **error threshold** by analysing performance under different noise models.
